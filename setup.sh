@@ -96,7 +96,6 @@ echo "echo -e ' ${B_GREEN}Done.${NC}'" >> "$TMP_RC"
 
 echo "if [ -f 'requirements.txt' ]; then" >> "$TMP_RC"
 echo "  echo -e '${B_YELLOW}📦 Installing dependencies (requirements.txt)...${NC}'" >> "$TMP_RC"
-# AQUI ESTA EL CAMBIO: Quitamos el > /dev/null para ver qué hace pip
 echo "  python3 -m pip install -r requirements.txt" >> "$TMP_RC"
 echo "  if [ \$? -eq 0 ]; then" >> "$TMP_RC"
 echo "      echo -e '\n${B_GREEN}✅ Dependencies installed successfully.${NC}'" >> "$TMP_RC"
