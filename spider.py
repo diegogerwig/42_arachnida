@@ -117,8 +117,8 @@ def main():
     
     parser = argparse.ArgumentParser(description="Spider: Web image extractor.")
     parser.add_argument("-r", action="store_true", help="Recursively downloads the images in a URL.")
-    parser.add_argument("-l", nargs='?', const=5, default=5, type=int, help="Maximum depth level of the recursive download (default: 5).")
-    parser.add_argument("-p", nargs='?', const=DEFAULT_PATH, default=DEFAULT_PATH, type=str, help=f"Path where downloaded files will be saved (default: {DEFAULT_PATH}).")
+    parser.add_argument("-l", default=5, type=int, help="Maximum depth level of the recursive download (default: 5).")
+    parser.add_argument("-p", default=DEFAULT_PATH, type=str, help=f"Path where downloaded files will be saved (default: {DEFAULT_PATH}).")
     parser.add_argument("URL", type=str, help="Base URL to scan.")
     
     args = parser.parse_args()
