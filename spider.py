@@ -153,9 +153,9 @@ def main():
     # ==========================================
     # FINAL SUMMARY
     # ==========================================
-    print("\n" + "═"*50)
+    print("\n" + "═"*80)
     print("📊 SPIDER EXECUTION SUMMARY")
-    print("═"*50)
+    print("═"*80)
     print(f"⏱️  Time elapsed       : {elapsed_time:.2f} seconds")
     print(f"🔗 Web pages scanned  : {len(visited_urls)}")
     print(f"📁 Destination folder : {save_path}")
@@ -164,9 +164,9 @@ def main():
     if stats['failed'] > 0:
         print(f"⚠️  Failed downloads   : {stats['failed']}")
     
-    print("\n" + "─"*60)
+    print("\n" + "─"*80)
     print("📈 BREAKDOWN BY DEPTH LEVEL")
-    print("─"*60)
+    print("─"*80)
     
     for depth in range(args.l + 1):
         if depth in urls_by_depth:
@@ -175,7 +175,7 @@ def main():
             for u in urls_by_depth[depth]:
                 print(f"      - {u}")
                             
-    print("═"*60 + "\n")
+    print("═"*80 + "\n")
 
 if __name__ == "__main__":
     main()

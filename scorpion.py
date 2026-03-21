@@ -12,16 +12,17 @@ def format_timestamp(ts):
 
 def analyze_image(filepath):
     """Parses an image file for EXIF and basic metadata."""
-    print(f"\n{'='*50}")
-    print(f"🦂 Analyzing: {filepath}")
-    print(f"{'='*50}")
+    print(f"\n{'='*80}")
+    print(f"🔍 Analyzing: {filepath}")
+    print(f"{'='*80}")
 
     if not os.path.exists(filepath):
         print("❌ Error: File does not exist.")
         return
 
     if not filepath.lower().endswith(ALLOWED_EXTENSIONS):
-        print(f"⚠️  Warning: Extension not supported by default.")
+        print(f"❌ Error: Extension not supported by default.")
+        return 
 
     try:
         stat = os.stat(filepath)
