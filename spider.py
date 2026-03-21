@@ -3,6 +3,7 @@ import os
 import argparse
 import requests
 import time
+import getpass
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 
@@ -13,7 +14,7 @@ def is_valid_extension(url):
     return url.lower().split('?')[0].endswith(ALLOWED_EXTENSIONS)
 
 def download_image(img_url, save_path, stats):
-    """Downloads an individual image and updates the stats counter."""
+    """Downloads an individual image and updates the stats counter. Returns filepath if successful."""
     try:
         response = requests.get(img_url, stream=True, timeout=10)
         if response.status_code == 200:
@@ -23,7 +24,6 @@ def download_image(img_url, save_path, stats):
             
             filepath = os.path.join(save_path, filename)
             
-            # Avoid overwriting images with the same name
             base, ext = os.path.splitext(filepath)
             counter = 1
             while os.path.exists(filepath):
@@ -34,23 +34,30 @@ def download_image(img_url, save_path, stats):
                 for chunk in response.iter_content(1024):
                     if chunk:
                         f.write(chunk)
-                        stats['total_bytes'] += len(chunk) # Sumar el tamaño
+                        stats['total_bytes'] += len(chunk) 
                         
             print(f"✅ Downloaded: {filepath}")
             stats['downloaded'] += 1
+            return filepath 
         else:
             stats['failed'] += 1
+            return None
     except Exception as e:
         print(f"❌ Error downloading {img_url}: {e}")
         stats['failed'] += 1
+        return None
 
-def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats):
+def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth):
     """Main recursive function to extract images."""
     if current_depth > max_depth or url in visited_urls:
         return
     
     visited_urls.add(url)
     print(f"\n🔍 [{current_depth}/{max_depth}] Scanning: {url}")
+
+    if current_depth not in urls_by_depth:
+        urls_by_depth[current_depth] = []
+    urls_by_depth[current_depth].append(url)
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -68,7 +75,11 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
         if img_src:
             img_url = urljoin(url, img_src)
             if is_valid_extension(img_url):
-                download_image(img_url, save_path, stats)
+                filepath = download_image(img_url, save_path, stats)
+                if filepath:
+                    if current_depth not in images_by_depth:
+                        images_by_depth[current_depth] = []
+                    images_by_depth[current_depth].append(filepath)
 
     if is_recursive and current_depth < max_depth:
         for a_tag in soup.find_all('a'):
@@ -77,50 +88,100 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
                 next_url = urljoin(url, link)
                 if urlparse(next_url).netloc == base_domain:
                     next_url = next_url.split('#')[0]
-                    scrape_url(next_url, is_recursive, max_depth, current_depth + 1, save_path, visited_urls, base_domain, stats)
+                    scrape_url(next_url, is_recursive, max_depth, current_depth + 1, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
+
+def resolve_path(raw_path):
+    """Resuelve la ruta absoluta de forma nativa e infalible, especial para 42."""
+    if not raw_path.startswith("~"):
+        return os.path.abspath(raw_path)
+        
+    home_dir = os.path.expanduser("~")
+    
+    if home_dir == "~":
+        user = getpass.getuser() 
+        possible_homes = [f"/nfs/homes/{user}", f"/home/{user}", f"/Users/{user}"]
+        
+        for p in possible_homes:
+            if os.path.exists(p):
+                home_dir = p
+                break
+        
+        if home_dir == "~":
+            home_dir = os.path.abspath(".")
+            
+    resolved = raw_path.replace("~", home_dir, 1)
+    return os.path.abspath(resolved)
 
 def main():
+    DEFAULT_PATH = resolve_path("~/Desktop/spyder/")
+    
     parser = argparse.ArgumentParser(description="Spider: Web image extractor.")
     parser.add_argument("-r", action="store_true", help="Recursively downloads the images in a URL.")
     parser.add_argument("-l", nargs='?', const=5, default=5, type=int, help="Maximum depth level of the recursive download (default: 5).")
-    parser.add_argument("-p", nargs='?', const="./data/", default="./data/", type=str, help="Path where downloaded files will be saved (default: ./data/).")
+    parser.add_argument("-p", nargs='?', const=DEFAULT_PATH, default=DEFAULT_PATH, type=str, help=f"Path where downloaded files will be saved (default: {DEFAULT_PATH}).")
     parser.add_argument("URL", type=str, help="Base URL to scan.")
     
     args = parser.parse_args()
+    save_path = resolve_path(args.p)
 
-    if not os.path.exists(args.p):
-        os.makedirs(args.p)
+    try:
+        if not os.path.exists(save_path):
+            os.makedirs(save_path, exist_ok=True)
+    except Exception as e:
+        print(f"❌ Error de permisos al crear {save_path}: {e}")
+        save_path = os.path.abspath('./spyder_fallback')
+        os.makedirs(save_path, exist_ok=True)
+        print(f"⚠️  Guardando en directorio alternativo: {save_path}")
 
     base_domain = urlparse(args.URL).netloc
     visited_urls = set()
     
     stats = {'downloaded': 0, 'failed': 0, 'total_bytes': 0}
     
+    urls_by_depth = {}
+    images_by_depth = {}
+    
     print("\n🕸️  Starting Spider...")
     start_time = time.time() 
     
-    scrape_url(args.URL, args.r, args.l, 0, args.p, visited_urls, base_domain, stats)
+    scrape_url(args.URL, args.r, args.l, 0, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
     
     end_time = time.time() 
-    
-    # Cálculos para el resumen
     elapsed_time = end_time - start_time
     total_mb = stats['total_bytes'] / (1024 * 1024)
     
     # ==========================================
     # FINAL SUMMARY
     # ==========================================
-    print("\n" + "═"*50)
+    print("\n" + "═"*60)
     print("📊 SPIDER EXECUTION SUMMARY")
-    print("═"*50)
+    print("═"*60)
     print(f"⏱️  Time elapsed       : {elapsed_time:.2f} seconds")
-    print(f"🔗 Web pages scanned  : {len(visited_urls)}")
-    print(f"📁 Destination folder : {args.p}")
-    print(f"📥 Images downloaded  : {stats['downloaded']}")
+    print(f"📁 Destination folder : {save_path}")
     print(f"💾 Total size         : {total_mb:.2f} MB")
     if stats['failed'] > 0:
         print(f"⚠️  Failed downloads   : {stats['failed']}")
-    print("═"*50 + "\n")
+    
+    print("\n" + "─"*60)
+    print("📈 BREAKDOWN BY DEPTH LEVEL")
+    print("─"*60)
+    
+    for depth in range(args.l + 1):
+        if depth in urls_by_depth:
+            print(f"\n🔽 LEVEL {depth}")
+            print(f"   🔗 Pages scanned ({len(urls_by_depth[depth])}):")
+            for u in urls_by_depth[depth]:
+                print(f"      - {u}")
+            
+            downloaded_at_level = images_by_depth.get(depth, [])
+            print(f"   🖼️  Images downloaded ({len(downloaded_at_level)}):")
+            if downloaded_at_level:
+                for img in downloaded_at_level:
+                    print(f"      - {os.path.basename(img)}")
+            else:
+                print("      - (No images at this level)")
+                
+    print("═"*60 + "\n")
 
 if __name__ == "__main__":
     main()
