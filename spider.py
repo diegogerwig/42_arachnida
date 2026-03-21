@@ -165,7 +165,7 @@ def main():
         print(f"⚠️  Failed downloads   : {stats['failed']}")
     
     print("\n" + "─"*80)
-    print("📈 BREAKDOWN BY DEPTH LEVEL")
+    print("📈 INFO BY DEPTH LEVEL")
     print("─"*80)
     
     for depth in range(args.l + 1):
