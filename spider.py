@@ -153,11 +153,13 @@ def main():
     # ==========================================
     # FINAL SUMMARY
     # ==========================================
-    print("\n" + "═"*60)
+    print("\n" + "═"*50)
     print("📊 SPIDER EXECUTION SUMMARY")
-    print("═"*60)
+    print("═"*50)
     print(f"⏱️  Time elapsed       : {elapsed_time:.2f} seconds")
+    print(f"🔗 Web pages scanned  : {len(visited_urls)}")
     print(f"📁 Destination folder : {save_path}")
+    print(f"📥 Images downloaded  : {stats['downloaded']}")
     print(f"💾 Total size         : {total_mb:.2f} MB")
     if stats['failed'] > 0:
         print(f"⚠️  Failed downloads   : {stats['failed']}")
@@ -172,15 +174,7 @@ def main():
             print(f"   🔗 Pages scanned ({len(urls_by_depth[depth])}):")
             for u in urls_by_depth[depth]:
                 print(f"      - {u}")
-            
-            downloaded_at_level = images_by_depth.get(depth, [])
-            print(f"   🖼️  Images downloaded ({len(downloaded_at_level)}):")
-            if downloaded_at_level:
-                for img in downloaded_at_level:
-                    print(f"      - {os.path.basename(img)}")
-            else:
-                print("      - (No images at this level)")
-                
+                            
     print("═"*60 + "\n")
 
 if __name__ == "__main__":
