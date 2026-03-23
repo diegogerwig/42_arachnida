@@ -10,11 +10,12 @@ from urllib.parse import urljoin, urlparse
 ALLOWED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 
 def is_valid_extension(url):
-    """Checks if the image URL ends with an allowed extension."""
-    return url.lower().split('?')[0].endswith(ALLOWED_EXTENSIONS)
+    url_lower = url.lower()
+    clean_url = url_lower.split('?')[0]
+    is_valid = clean_url.endswith(ALLOWED_EXTENSIONS)
+    return is_valid
 
 def download_image(img_url, save_path, stats):
-    """Downloads an individual image and updates the stats counter. Returns filepath if successful."""
     try:
         response = requests.get(img_url, stream=True, timeout=10)
         if response.status_code == 200:
