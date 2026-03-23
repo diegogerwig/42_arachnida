@@ -49,25 +49,15 @@ def download_image(img_url, save_path, stats):
         stats['failed'] += 1
         return None
 
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
-
 def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth):
-    """Escanea una URL para descargar sus imágenes y, opcionalmente, seguir sus enlaces."""
-    
-    # --- 1. CONDICIONES DE PARADA (Caso Base) ---
     if current_depth > max_depth or url in visited_urls:
         return
     
-    # --- 2. REGISTRO DE LA URL ACTUAL ---
     visited_urls.add(url)
     print(f"\n🔍 [{current_depth}/{max_depth}] Escaneando: {url}")
 
-    # .setdefault() crea la lista si no existe, y luego añade la URL. ¡Nos ahorra 2 líneas!
     urls_by_depth.setdefault(current_depth, []).append(url)
 
-    # --- 3. OBTENER EL CÓDIGO HTML ---
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
@@ -79,14 +69,11 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
         print(f"⚠️  No se pudo acceder a {url}: {e}")
         return
 
-    # Si llegamos aquí, la página cargó bien. Analizamos el HTML.
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # --- 4. EXTRACCIÓN Y DESCARGA DE IMÁGENES ---
     for img_tag in soup.find_all('img'):
         img_src = img_tag.get('src')
         
-        # Guard Clauses: Si algo falla, saltamos a la siguiente imagen con 'continue'
         if not img_src: 
             continue
             
@@ -95,13 +82,11 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
         if not is_valid_extension(img_url): 
             continue
             
-        # Si la imagen es válida, la descargamos
         filepath = download_image(img_url, save_path, stats)
         
         if filepath:
             images_by_depth.setdefault(current_depth, []).append(filepath)
 
-    # --- 5. BÚSQUEDA DE NUEVOS ENLACES (Recursividad) ---
     if is_recursive and current_depth < max_depth:
         for a_tag in soup.find_all('a'):
             link = a_tag.get('href')
@@ -111,16 +96,15 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
                 
             next_url = urljoin(url, link)
             
-            # Limpiamos los fragmentos (ej. pagina.html#seccion1 -> pagina.html)
             next_url = next_url.split('#')[0]
             
-            # Verificamos que no nos estemos saliendo del sitio web original
             if urlparse(next_url).netloc == base_domain:
                 scrape_url(
                     next_url, is_recursive, max_depth, current_depth + 1, 
                     save_path, visited_urls, base_domain, stats, 
                     urls_by_depth, images_by_depth
                 )
+
 def resolve_path(raw_path):
     if not raw_path.startswith("~"):
         return os.path.abspath(raw_path)
@@ -152,8 +136,9 @@ def main():
     parser.add_argument("URL", type=str, help="Base URL to scan.")
     
     args = parser.parse_args()
+    
     save_path = resolve_path(args.p)
-
+    
     try:
         if not os.path.exists(save_path):
             os.makedirs(save_path, exist_ok=True)
@@ -165,24 +150,23 @@ def main():
 
     base_domain = urlparse(args.URL).netloc
     visited_urls = set()
-    
-    stats = {'downloaded': 0, 'failed': 0, 'total_bytes': 0}
-    
     urls_by_depth = {}
     images_by_depth = {}
+    stats = {'downloaded': 0, 'failed': 0, 'total_bytes': 0}
     
-    print("\n🕷️ Starting Spider...")
+    print("\n🕷️  Starting Spider...")
     start_time = time.time() 
     
-    scrape_url(args.URL, args.r, args.l, 0, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
+    scrape_url(
+        args.URL, args.r, args.l, 0, 
+        save_path, visited_urls, base_domain, 
+        stats, urls_by_depth, images_by_depth
+    )
     
     end_time = time.time() 
     elapsed_time = end_time - start_time
     total_mb = stats['total_bytes'] / (1024 * 1024)
     
-    # ==========================================
-    # FINAL SUMMARY
-    # ==========================================
     print("\n" + "═"*80)
     print("📊 SPIDER EXECUTION SUMMARY")
     print("═"*80)
@@ -191,6 +175,7 @@ def main():
     print(f"📁 Destination folder : {save_path}")
     print(f"📥 Images downloaded  : {stats['downloaded']}")
     print(f"💾 Total size         : {total_mb:.2f} MB")
+    
     if stats['failed'] > 0:
         print(f"⚠️  Failed downloads   : {stats['failed']}")
     
@@ -204,7 +189,7 @@ def main():
             print(f"   🔗 Pages scanned ({len(urls_by_depth[depth])}):")
             for u in urls_by_depth[depth]:
                 print(f"      - {u}")
-                            
+                
     print("═"*80 + "\n")
 
 if __name__ == "__main__":
