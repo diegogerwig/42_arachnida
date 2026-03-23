@@ -16,12 +16,15 @@ def is_valid_extension(url):
     return is_valid
 
 def download_image(img_url, save_path, stats):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
     try:
-        response = requests.get(img_url, stream=True, timeout=10)
+        response = requests.get(img_url, headers=headers, stream=True, timeout=10)
         
         if response.status_code != 200:
             stats['failed'] += 1
             return None
+            
         raw_filename = os.path.basename(urlparse(img_url).path)
         filename = raw_filename or "unnamed_image"
         filepath = os.path.join(save_path, filename)
