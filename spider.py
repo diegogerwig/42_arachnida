@@ -185,7 +185,7 @@ def main():
     
     for depth in range(args.l + 1):
         if depth in urls_by_depth:
-            print(f"\n🔽 LEVEL {depth}")
+            print(f"🔽 LEVEL {depth}")
             print(f"   🔗 Pages scanned ({len(urls_by_depth[depth])}):")
             for u in urls_by_depth[depth]:
                 print(f"      - {u}")
