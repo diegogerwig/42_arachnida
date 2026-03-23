@@ -55,7 +55,7 @@ fi
 # 3. VENV CREATION
 # ==========================================
 if [ ! -d "$VENV_PATH" ]; then
-    echo -ne "${B_YELLOW}⚙️  Looking for modern Python...${NC}"
+    echo -ne "${B_YELLOW}⚙️  Looking for Python versions...${NC}"
 
     PYTHON_BIN="python3"
     for py_ver in python3.13 python3.12 python3.11 python3.10 python3.9; do
