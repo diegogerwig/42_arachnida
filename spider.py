@@ -18,38 +18,38 @@ def is_valid_extension(url):
 def download_image(img_url, save_path, stats):
     try:
         response = requests.get(img_url, stream=True, timeout=10)
-        if response.status_code == 200:
-            filename = os.path.basename(urlparse(img_url).path)
-            if not filename:
-                filename = "unnamed_image"
-            
-            filepath = os.path.join(save_path, filename)
-            
-            base, ext = os.path.splitext(filepath)
-            counter = 1
-            while os.path.exists(filepath):
-                filepath = f"{base}_{counter}{ext}"
-                counter += 1
-
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(1024):
-                    if chunk:
-                        f.write(chunk)
-                        stats['total_bytes'] += len(chunk) 
-                        
-            print(f"✅ Downloaded: {filepath}")
-            stats['downloaded'] += 1
-            return filepath 
-        else:
+        
+        if response.status_code != 200:
             stats['failed'] += 1
             return None
+        raw_filename = os.path.basename(urlparse(img_url).path)
+        filename = raw_filename or "unnamed_image"
+        filepath = os.path.join(save_path, filename)
+        
+        base_name, extension = os.path.splitext(filepath)
+        counter = 1
+        while os.path.exists(filepath):
+            filepath = f"{base_name}_{counter}{extension}"
+            counter += 1
+
+        chunk_size = 1024
+        
+        with open(filepath, 'wb') as file:
+            for chunk in response.iter_content(chunk_size):
+                if chunk: 
+                    file.write(chunk)
+                    stats['total_bytes'] += len(chunk) 
+                    
+        print(f"✅ Downloaded: {filepath}")
+        stats['downloaded'] += 1
+        return filepath 
+        
     except Exception as e:
         print(f"❌ Error downloading {img_url}: {e}")
         stats['failed'] += 1
         return None
 
 def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth):
-    """Main recursive function to extract images."""
     if current_depth > max_depth or url in visited_urls:
         return
     
@@ -92,7 +92,6 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
                     scrape_url(next_url, is_recursive, max_depth, current_depth + 1, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
 
 def resolve_path(raw_path):
-    """Resuelve la ruta absoluta de forma nativa e infalible, especial para 42."""
     if not raw_path.startswith("~"):
         return os.path.abspath(raw_path)
         
@@ -142,7 +141,7 @@ def main():
     urls_by_depth = {}
     images_by_depth = {}
     
-    print("\n🕸️  Starting Spider...")
+    print("\n🕷️ Starting Spider...")
     start_time = time.time() 
     
     scrape_url(args.URL, args.r, args.l, 0, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
