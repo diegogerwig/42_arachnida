@@ -49,48 +49,78 @@ def download_image(img_url, save_path, stats):
         stats['failed'] += 1
         return None
 
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+
 def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth):
+    """Escanea una URL para descargar sus imágenes y, opcionalmente, seguir sus enlaces."""
+    
+    # --- 1. CONDICIONES DE PARADA (Caso Base) ---
     if current_depth > max_depth or url in visited_urls:
         return
     
+    # --- 2. REGISTRO DE LA URL ACTUAL ---
     visited_urls.add(url)
-    print(f"\n🔍 [{current_depth}/{max_depth}] Scanning: {url}")
+    print(f"\n🔍 [{current_depth}/{max_depth}] Escaneando: {url}")
 
-    if current_depth not in urls_by_depth:
-        urls_by_depth[current_depth] = []
-    urls_by_depth[current_depth].append(url)
+    # .setdefault() crea la lista si no existe, y luego añade la URL. ¡Nos ahorra 2 líneas!
+    urls_by_depth.setdefault(current_depth, []).append(url)
 
+    # --- 3. OBTENER EL CÓDIGO HTML ---
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
+        
         if response.status_code != 200:
             return
+            
     except Exception as e:
-        print(f"⚠️  Could not access {url}: {e}")
+        print(f"⚠️  No se pudo acceder a {url}: {e}")
         return
 
+    # Si llegamos aquí, la página cargó bien. Analizamos el HTML.
     soup = BeautifulSoup(response.text, 'html.parser')
 
+    # --- 4. EXTRACCIÓN Y DESCARGA DE IMÁGENES ---
     for img_tag in soup.find_all('img'):
         img_src = img_tag.get('src')
-        if img_src:
-            img_url = urljoin(url, img_src)
-            if is_valid_extension(img_url):
-                filepath = download_image(img_url, save_path, stats)
-                if filepath:
-                    if current_depth not in images_by_depth:
-                        images_by_depth[current_depth] = []
-                    images_by_depth[current_depth].append(filepath)
+        
+        # Guard Clauses: Si algo falla, saltamos a la siguiente imagen con 'continue'
+        if not img_src: 
+            continue
+            
+        img_url = urljoin(url, img_src)
+        
+        if not is_valid_extension(img_url): 
+            continue
+            
+        # Si la imagen es válida, la descargamos
+        filepath = download_image(img_url, save_path, stats)
+        
+        if filepath:
+            images_by_depth.setdefault(current_depth, []).append(filepath)
 
+    # --- 5. BÚSQUEDA DE NUEVOS ENLACES (Recursividad) ---
     if is_recursive and current_depth < max_depth:
         for a_tag in soup.find_all('a'):
             link = a_tag.get('href')
-            if link:
-                next_url = urljoin(url, link)
-                if urlparse(next_url).netloc == base_domain:
-                    next_url = next_url.split('#')[0]
-                    scrape_url(next_url, is_recursive, max_depth, current_depth + 1, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth)
-
+            
+            if not link: 
+                continue
+                
+            next_url = urljoin(url, link)
+            
+            # Limpiamos los fragmentos (ej. pagina.html#seccion1 -> pagina.html)
+            next_url = next_url.split('#')[0]
+            
+            # Verificamos que no nos estemos saliendo del sitio web original
+            if urlparse(next_url).netloc == base_domain:
+                scrape_url(
+                    next_url, is_recursive, max_depth, current_depth + 1, 
+                    save_path, visited_urls, base_domain, stats, 
+                    urls_by_depth, images_by_depth
+                )
 def resolve_path(raw_path):
     if not raw_path.startswith("~"):
         return os.path.abspath(raw_path)
