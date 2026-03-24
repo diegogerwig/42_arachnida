@@ -53,6 +53,8 @@ def download_image(img_url, save_path, stats):
         return None
 
 def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_urls, base_domain, stats, urls_by_depth, images_by_depth):
+    
+    url = url.rstrip('/')
     if current_depth > max_depth or url in visited_urls:
         return
     
@@ -63,7 +65,7 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=20)
         
         if response.status_code != 200:
             return
