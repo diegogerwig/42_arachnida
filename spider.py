@@ -19,7 +19,7 @@ def download_image(img_url, save_path, stats):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
 
     try:
-        response = requests.get(img_url, headers=headers, stream=True, timeout=10)
+        response = requests.get(img_url, headers=headers, stream=True, timeout=15)
         
         if response.status_code != 200:
             stats['failed'] += 1
@@ -65,7 +65,7 @@ def scrape_url(url, is_recursive, max_depth, current_depth, save_path, visited_u
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=20)
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code != 200:
             return
